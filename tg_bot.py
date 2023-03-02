@@ -3,7 +3,8 @@
 from functools import partial
 import logging
 import logging.config
-
+import textwrap
+from pprint import pprint
 from environs import Env
 import redis
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -15,24 +16,34 @@ from log.config import log_config
 
 logger = logging.getLogger('shop_bot')
 
-def start(bot, update, products):
+def start(bot, update, motlin_client):
     """Хэндлер состояния START"""
-    keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(text='Привет! Пожалуйста выберите товар:', reply_markup=reply_markup)
-    return "ECHO"
-
-def echo(bot, update, products):
-    """Хэндлер для состояния ECHO"""
-    users_reply = update.message.text
-    update.message.reply_text(users_reply)
-    return "ECHO"
-
-def handle_users_reply(update, context, states_functions, redis_client, motlin_client):
-    """Функция, которая запускается при любом сообщении от пользователя и решает как его обработать."""
     products_motlin = motlin_client.get_products()
     products = [{'id': product.get('id'), 'name': product['attributes'].get('name')}
                 for product in products_motlin.get('data')]
+    keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.message.reply_text(text='Привет! Пожалуйста выберите товар:', reply_markup=reply_markup)
+    return "HANDLE_MENU"
+
+
+def handle_menu(bot, update, motlin_client):
+    """Хэндлер обработки нажатия на товар"""
+    query = update.callback_query
+    product = motlin_client.get_product(query.data)
+    product = product.get('data')
+    product_details = textwrap.dedent(f'''
+{product['attributes'].get('name')}
+{product['meta']['display_price']['without_tax']['formatted']}
+{product['attributes'].get('description')}
+                                      ''')
+    bot.edit_message_text(text=product_details,
+                          chat_id=query.message.chat_id,
+                          message_id=query.message.message_id)
+    return 'START'
+
+def handle_users_reply(update, context, states_functions, redis_client, motlin_client):
+    """Функция, которая запускается при любом сообщении от пользователя и решает как его обработать."""
 
     if update.message:
         user_reply = update.message.text
@@ -50,7 +61,7 @@ def handle_users_reply(update, context, states_functions, redis_client, motlin_c
     state_handler = states_functions[user_state]
 
     try:
-        next_state = state_handler(context.bot, update, products)
+        next_state = state_handler(context.bot, update, motlin_client)
         redis_client.set(chat_id, next_state)
     except Exception as err:
         print(err)
@@ -75,7 +86,7 @@ def main():
 
     states_functions = {
         'START': start,
-        'ECHO': echo
+        'HANDLE_MENU': handle_menu
     }
 
     handler_kwargs = {

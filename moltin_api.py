@@ -12,6 +12,7 @@ class MotlinClient():
         self.access_token = ''
         self.auth_url = 'https://api.moltin.com/oauth/access_token'
         self.get_products_url = 'https://api.moltin.com/catalog/products'
+        self.get_product_url = 'https://api.moltin.com/catalog/products/'
 
     def auth(self):
         """Авторизация на Motlin"""
@@ -33,6 +34,16 @@ class MotlinClient():
             'Authorization': f'Bearer {self.access_token}'
         }
         response = requests.get(self.get_products_url, headers=headers)
+        response.raise_for_status()
+
+        return response.json()
+
+    def get_product(self, id):
+        """Получает продукт по id"""
+        headers = {
+            'Authorization': f'Bearer {self.access_token}'
+        }
+        response = requests.get(f'{self.get_product_url}{id}/', headers=headers)
         response.raise_for_status()
 
         return response.json()
