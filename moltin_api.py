@@ -13,6 +13,7 @@ class MotlinClient():
         self.auth_url = 'https://api.moltin.com/oauth/access_token'
         self.get_products_url = 'https://api.moltin.com/catalog/products'
         self.get_product_url = 'https://api.moltin.com/catalog/products/'
+        self.get_file_url = 'https://api.moltin.com/v2/files/'
 
     def auth(self):
         """Авторизация на Motlin"""
@@ -47,6 +48,17 @@ class MotlinClient():
         response.raise_for_status()
 
         return response.json()
+
+    def get_file(self, id):
+        """Получает ссылку на файл"""
+        headers = {
+            'Authorization': f'Bearer {self.access_token}'
+        }
+        response = requests.get(f'{self.get_file_url}{id}/', headers=headers)
+        response.raise_for_status()
+        response = response.json()
+
+        return response['data']['link']['href']
 
 
 if __name__ == '__main__':

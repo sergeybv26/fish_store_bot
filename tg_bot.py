@@ -32,14 +32,16 @@ def handle_menu(bot, update, motlin_client):
     query = update.callback_query
     product = motlin_client.get_product(query.data)
     product = product.get('data')
+    image_id = product['relationships']['main_image']['data']['id']
+    image_link = motlin_client.get_file(image_id)
     product_details = textwrap.dedent(f'''
 {product['attributes'].get('name')}
 {product['meta']['display_price']['without_tax']['formatted']}
 {product['attributes'].get('description')}
                                       ''')
-    bot.edit_message_text(text=product_details,
-                          chat_id=query.message.chat_id,
-                          message_id=query.message.message_id)
+    bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
+    bot.sendPhoto(chat_id=query.message.chat_id, photo=image_link, caption=product_details)
+
     return 'START'
 
 def handle_users_reply(update, context, states_functions, redis_client, motlin_client):
