@@ -24,7 +24,7 @@ log_config = {
         }
     },
     "loggers": {
-        "bot-quiz": {
+        "shop_bot": {
             "handlers": ["streamHandler", "fileHandler"],
             "level": "DEBUG"
         }
