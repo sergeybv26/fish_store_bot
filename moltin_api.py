@@ -107,6 +107,23 @@ class MoltinClient():
                                    headers=self.headers)
         response.raise_for_status()
 
+    def create_customer(self, chat_id, email):
+        """Создает покупателя
+
+        Args:
+            chat_id (str): id пользователя
+            email (str): email пользователя
+        """
+        payload = {
+            "data": {
+                "type": "customer",
+                "name": chat_id,
+                "email": email
+            }
+        }
+        response = requests.post('https://api.moltin.com/v2/customers', headers=self.headers, json=payload)
+        response.raise_for_status()
+
 
 if __name__ == '__main__':
     env = Env()

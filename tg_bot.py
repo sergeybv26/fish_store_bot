@@ -4,7 +4,7 @@ from functools import partial
 import logging
 import logging.config
 import textwrap
-from pprint import pprint
+
 from environs import Env
 import redis
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -137,7 +137,12 @@ def handle_waiting_email(bot, update, context, moltin_client):
     """Хэндлер обработки покупки"""
     email = update.message.text
     chat_id = update.message.chat_id
+    moltin_client.create_customer(str(chat_id), email)
     bot.send_message(text=f'Вы прислали мне эту почту: {email}', chat_id=chat_id)
+    reply_markup = create_menu_button(moltin_client)
+    bot.send_message(text='Привет! Пожалуйста выберите товар:', chat_id=chat_id,
+                     reply_markup=reply_markup)
+    return 'HANDLE_MENU'
 
 def handle_users_reply(update, context, states_functions, redis_client, moltin_client):
     """Функция, которая запускается при любом сообщении от пользователя и решает как его обработать."""
