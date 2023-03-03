@@ -10,6 +10,7 @@ class MoltinClient():
         self.client_id = client_id
         self.client_secret = client_secret
         self.access_token = ''
+        self.headers = {}
         self.auth_url = 'https://api.moltin.com/oauth/access_token'
         self.get_products_url = 'https://api.moltin.com/catalog/products'
         self.get_product_url = 'https://api.moltin.com/catalog/products/'
@@ -28,37 +29,51 @@ class MoltinClient():
         response_auth.raise_for_status()
         response_auth = response_auth.json()
         self.access_token = response_auth['access_token']
+        self.headers = {
+            'Authorization': f'Bearer {self.access_token}'
+        }
 
     def get_products(self):
         """Получает продукты"""
-        headers = {
-            'Authorization': f'Bearer {self.access_token}'
-        }
-        response = requests.get(self.get_products_url, headers=headers)
+        response = requests.get(self.get_products_url, headers=self.headers)
         response.raise_for_status()
 
         return response.json()
 
     def get_product(self, id):
         """Получает продукт по id"""
-        headers = {
-            'Authorization': f'Bearer {self.access_token}'
-        }
-        response = requests.get(f'{self.get_product_url}{id}/', headers=headers)
+        response = requests.get(f'{self.get_product_url}{id}/', headers=self.headers)
         response.raise_for_status()
 
         return response.json()
 
     def get_file(self, id):
         """Получает ссылку на файл"""
-        headers = {
-            'Authorization': f'Bearer {self.access_token}'
-        }
-        response = requests.get(f'{self.get_file_url}{id}/', headers=headers)
+        response = requests.get(f'{self.get_file_url}{id}/', headers=self.headers)
         response.raise_for_status()
         response = response.json()
 
         return response['data']['link']['href']
+
+    def add_to_cart(self, user_id, product_id, quantity):
+        """Добавляет товар в корзину
+
+        Args:
+            user_id (str): id пользователя
+            product_id (str): id товара
+            quantity (int): количество товара
+        """
+        payload = {
+            "data": {
+                "id": product_id,
+                "type": "cart_item",
+                "quantity": quantity
+            }
+        }
+        response = requests.post(f'https://api.moltin.com/v2/carts/{user_id}/items/',
+                                 json=payload, headers=self.headers)
+        response.raise_for_status()
+        pprint(response.json())
 
 
 if __name__ == '__main__':

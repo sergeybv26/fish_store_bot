@@ -25,16 +25,17 @@ def create_menu_button(moltin_client):
     reply_markup = InlineKeyboardMarkup(keyboard)
     return reply_markup
 
-def start(bot, update, moltin_client):
+def start(bot, update, context, moltin_client):
     """Хэндлер состояния START"""
     reply_markup = create_menu_button(moltin_client)
     update.message.reply_text(text='Привет! Пожалуйста выберите товар:', reply_markup=reply_markup)
     return "HANDLE_MENU"
 
 
-def handle_menu(bot, update, moltin_client):
+def handle_menu(bot, update, context, moltin_client):
     """Хэндлер обработки нажатия на товар"""
     query = update.callback_query
+    context.user_data['product_id'] = query.data
     product = moltin_client.get_product(query.data)
     product = product.get('data')
     image_id = product['relationships']['main_image']['data']['id']
@@ -44,23 +45,33 @@ def handle_menu(bot, update, moltin_client):
 {product['meta']['display_price']['without_tax']['formatted']}
 {product['attributes'].get('description')}
                                       ''')
-    keyboard = [[InlineKeyboardButton('Назад', callback_data='back')]]
+    keyboard = [
+        [InlineKeyboardButton('1 кг', callback_data=1),
+         InlineKeyboardButton('5 кг', callback_data=5),
+         InlineKeyboardButton('10 кг', callback_data=10),
+         ],
+        [InlineKeyboardButton('Назад', callback_data='back')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
     bot.sendPhoto(chat_id=query.message.chat_id, photo=image_link, caption=product_details, reply_markup=reply_markup)
 
     return 'HANDLE_DESCRIPTION'
 
-def handle_description(bot, update, moltin_client):
+def handle_description(bot, update, context, moltin_client):
     """Хэндлер обработки кнопок в подробном отображении товара"""
     query = update.callback_query
     callback_data = query.data
+    chat_id = query.message.chat_id
+    product_id = context.user_data['product_id']
     if callback_data == 'back':
         reply_markup = create_menu_button(moltin_client)
         bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
-        bot.send_message(text='Привет! Пожалуйста выберите товар:', chat_id=query.message.chat_id,
+        bot.send_message(text='Привет! Пожалуйста выберите товар:', chat_id=chat_id,
                          reply_markup=reply_markup)
-    return 'HANDLE_MENU'
+        return 'HANDLE_MENU'
+    else:
+        moltin_client.add_to_cart(chat_id, product_id, int(callback_data))
+        return 'HANDLE_DESCRIPTION'
 
 def handle_users_reply(update, context, states_functions, redis_client, moltin_client):
     """Функция, которая запускается при любом сообщении от пользователя и решает как его обработать."""
@@ -82,7 +93,7 @@ def handle_users_reply(update, context, states_functions, redis_client, moltin_c
     state_handler = states_functions[user_state]
 
     try:
-        next_state = state_handler(context.bot, update, moltin_client)
+        next_state = state_handler(context.bot, update, context, moltin_client)
         redis_client.set(chat_id, next_state)
     except Exception as err:
         print(err)
@@ -119,7 +130,7 @@ def main():
 
     handle_users_reply_partial = partial(handle_users_reply, **handler_kwargs)
 
-    updater = Updater(tg_token)
+    updater = Updater(tg_token, use_context=True)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CallbackQueryHandler(handle_users_reply_partial))
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply_partial))
