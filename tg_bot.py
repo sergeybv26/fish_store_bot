@@ -9,42 +9,60 @@ from environs import Env
 import redis
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CallbackQueryHandler, MessageHandler, CommandHandler, Filters
-from moltin_api import MotlinClient
+from moltin_api import MoltinClient
 
 from log.config import log_config
 
 
 logger = logging.getLogger('shop_bot')
 
-def start(bot, update, motlin_client):
-    """Хэндлер состояния START"""
-    products_motlin = motlin_client.get_products()
+def create_menu_button(moltin_client):
+    """Формирует inline кнопки меню с товарами"""
+    products_moltin = moltin_client.get_products()
     products = [{'id': product.get('id'), 'name': product['attributes'].get('name')}
-                for product in products_motlin.get('data')]
+                for product in products_moltin.get('data')]
     keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    return reply_markup
+
+def start(bot, update, moltin_client):
+    """Хэндлер состояния START"""
+    reply_markup = create_menu_button(moltin_client)
     update.message.reply_text(text='Привет! Пожалуйста выберите товар:', reply_markup=reply_markup)
     return "HANDLE_MENU"
 
 
-def handle_menu(bot, update, motlin_client):
+def handle_menu(bot, update, moltin_client):
     """Хэндлер обработки нажатия на товар"""
     query = update.callback_query
-    product = motlin_client.get_product(query.data)
+    product = moltin_client.get_product(query.data)
     product = product.get('data')
     image_id = product['relationships']['main_image']['data']['id']
-    image_link = motlin_client.get_file(image_id)
+    image_link = moltin_client.get_file(image_id)
     product_details = textwrap.dedent(f'''
 {product['attributes'].get('name')}
 {product['meta']['display_price']['without_tax']['formatted']}
 {product['attributes'].get('description')}
                                       ''')
+    keyboard = [[InlineKeyboardButton('Назад', callback_data='back')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
-    bot.sendPhoto(chat_id=query.message.chat_id, photo=image_link, caption=product_details)
+    bot.sendPhoto(chat_id=query.message.chat_id, photo=image_link, caption=product_details, reply_markup=reply_markup)
 
-    return 'START'
+    return 'HANDLE_DESCRIPTION'
 
-def handle_users_reply(update, context, states_functions, redis_client, motlin_client):
+def handle_description(bot, update, moltin_client):
+    """Хэндлер обработки кнопок в подробном отображении товара"""
+    query = update.callback_query
+    callback_data = query.data
+    if callback_data == 'back':
+        reply_markup = create_menu_button(moltin_client)
+        bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
+        bot.send_message(text='Привет! Пожалуйста выберите товар:', chat_id=query.message.chat_id,
+                         reply_markup=reply_markup)
+    return 'HANDLE_MENU'
+
+def handle_users_reply(update, context, states_functions, redis_client, moltin_client):
     """Функция, которая запускается при любом сообщении от пользователя и решает как его обработать."""
 
     if update.message:
@@ -55,6 +73,7 @@ def handle_users_reply(update, context, states_functions, redis_client, motlin_c
         chat_id = update.callback_query.message.chat_id
     else:
         return
+    logger.info(f'{user_reply=}')
     if user_reply == '/start':
         user_state = 'START'
     else:
@@ -63,7 +82,7 @@ def handle_users_reply(update, context, states_functions, redis_client, motlin_c
     state_handler = states_functions[user_state]
 
     try:
-        next_state = state_handler(context.bot, update, motlin_client)
+        next_state = state_handler(context.bot, update, moltin_client)
         redis_client.set(chat_id, next_state)
     except Exception as err:
         print(err)
@@ -83,18 +102,19 @@ def main():
 
     redis_client = redis.Redis(host=redis_host, port=redis_port, password=redis_pswd)
 
-    motlin_client = MotlinClient(moltin_client_id, moltin_client_secret)
-    motlin_client.auth()
+    moltin_client = MoltinClient(moltin_client_id, moltin_client_secret)
+    moltin_client.auth()
 
     states_functions = {
         'START': start,
-        'HANDLE_MENU': handle_menu
+        'HANDLE_MENU': handle_menu,
+        'HANDLE_DESCRIPTION': handle_description
     }
 
     handler_kwargs = {
         'states_functions': states_functions,
         'redis_client': redis_client,
-        'motlin_client': motlin_client
+        'moltin_client': moltin_client
     }
 
     handle_users_reply_partial = partial(handle_users_reply, **handler_kwargs)

@@ -4,7 +4,7 @@ import requests
 from pprint import pprint
 
 
-class MotlinClient():
+class MoltinClient():
     """Класс, реализующий взаимодействие с motlin"""
     def __init__(self, client_id, client_secret) -> None:
         self.client_id = client_id
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     moltin_client_id = env('MOLTIN_CLIENT_ID')
     moltin_client_secret = env('MOLTIN_CLIENT_SECRET')
 
-    motlin_client = MotlinClient(moltin_client_id, moltin_client_secret)
+    motlin_client = MoltinClient(moltin_client_id, moltin_client_secret)
     motlin_client.auth()
 
     products = motlin_client.get_products()
