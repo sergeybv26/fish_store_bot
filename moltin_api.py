@@ -85,6 +85,17 @@ class MoltinClient():
 
         return response.json()
 
+    def get_basket(self, user_id):
+        """Получает корзину пользователя
+
+        Args:
+            user_id (str): id пользователя
+        """
+        response = requests.get(f'https://api.moltin.com/v2/carts/{user_id}', headers=self.headers)
+        response.raise_for_status()
+
+        return response.json()
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()

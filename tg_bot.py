@@ -29,6 +29,8 @@ def create_menu_button(moltin_client):
 def create_message_for_basket(chat_id, moltin_client):
     """Формирует сообщение для отображения в корзине"""
     basket_items = moltin_client.get_basket_items(chat_id)
+    basket = moltin_client.get_basket(chat_id)
+    basket = basket.get('data')
     basket_items = basket_items.get('data')
     message = ''
     for basket_item in basket_items:
@@ -39,6 +41,9 @@ def create_message_for_basket(chat_id, moltin_client):
 В корзине {basket_item.get('quantity')} кг на {basket_item['meta']['display_price']['with_tax']['value']['formatted']}
 
                                    ''')
+    message += textwrap.dedent(f'''
+Итого: {basket['meta']['display_price']['with_tax']['formatted']}
+                               ''')
     return message
 
 def start(bot, update, context, moltin_client):
