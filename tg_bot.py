@@ -22,8 +22,24 @@ def create_menu_button(moltin_client):
     products = [{'id': product.get('id'), 'name': product['attributes'].get('name')}
                 for product in products_moltin.get('data')]
     keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
+    keyboard.append([InlineKeyboardButton('Корзина', callback_data='basket')])
     reply_markup = InlineKeyboardMarkup(keyboard)
     return reply_markup
+
+def create_message_for_basket(chat_id, moltin_client):
+    """Формирует сообщение для отображения в корзине"""
+    basket_items = moltin_client.get_basket_items(chat_id)
+    basket_items = basket_items.get('data')
+    message = ''
+    for basket_item in basket_items:
+        message += textwrap.dedent(f'''
+{basket_item.get('name')}
+{basket_item.get('description')}
+{basket_item['meta']['display_price']['with_tax']['unit']['formatted']} за кг
+В корзине {basket_item.get('quantity')} кг на {basket_item['meta']['display_price']['with_tax']['value']['formatted']}
+
+                                   ''')
+    return message
 
 def start(bot, update, context, moltin_client):
     """Хэндлер состояния START"""
@@ -35,6 +51,11 @@ def start(bot, update, context, moltin_client):
 def handle_menu(bot, update, context, moltin_client):
     """Хэндлер обработки нажатия на товар"""
     query = update.callback_query
+    chat_id = query.message.chat_id
+    if query.data == 'basket':
+        basket_message = create_message_for_basket(chat_id, moltin_client)
+        bot.send_message(text=basket_message, chat_id=chat_id)
+        return 'HANDLE_MENU'
     context.user_data['product_id'] = query.data
     product = moltin_client.get_product(query.data)
     product = product.get('data')
@@ -50,10 +71,11 @@ def handle_menu(bot, update, context, moltin_client):
          InlineKeyboardButton('5 кг', callback_data=5),
          InlineKeyboardButton('10 кг', callback_data=10),
          ],
+        [InlineKeyboardButton('Корзина', callback_data='basket')],
         [InlineKeyboardButton('Назад', callback_data='back')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
-    bot.sendPhoto(chat_id=query.message.chat_id, photo=image_link, caption=product_details, reply_markup=reply_markup)
+    bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
+    bot.sendPhoto(chat_id=chat_id, photo=image_link, caption=product_details, reply_markup=reply_markup)
 
     return 'HANDLE_DESCRIPTION'
 
@@ -69,8 +91,12 @@ def handle_description(bot, update, context, moltin_client):
         bot.send_message(text='Привет! Пожалуйста выберите товар:', chat_id=chat_id,
                          reply_markup=reply_markup)
         return 'HANDLE_MENU'
+    elif callback_data == 'basket':
+        basket_message = create_message_for_basket(chat_id, moltin_client)
+        bot.send_message(text=basket_message, chat_id=chat_id)
+        return 'HANDLE_MENU'
     else:
-        moltin_client.add_to_cart(chat_id, product_id, int(callback_data))
+        moltin_client.add_to_basket(chat_id, product_id, int(callback_data))
         return 'HANDLE_DESCRIPTION'
 
 def handle_users_reply(update, context, states_functions, redis_client, moltin_client):

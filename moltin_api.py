@@ -55,7 +55,7 @@ class MoltinClient():
 
         return response['data']['link']['href']
 
-    def add_to_cart(self, user_id, product_id, quantity):
+    def add_to_basket(self, user_id, product_id, quantity):
         """Добавляет товар в корзину
 
         Args:
@@ -73,8 +73,17 @@ class MoltinClient():
         response = requests.post(f'https://api.moltin.com/v2/carts/{user_id}/items/',
                                  json=payload, headers=self.headers)
         response.raise_for_status()
-        pprint(response.json())
 
+    def get_basket_items(self, user_id):
+        """Получает товары корзины
+
+        Args:
+            user_id (str): id пользователя
+        """
+        response = requests.get(f'https://api.moltin.com/v2/carts/{user_id}/items', headers=self.headers)
+        response.raise_for_status()
+
+        return response.json()
 
 if __name__ == '__main__':
     env = Env()
