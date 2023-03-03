@@ -74,7 +74,7 @@ class MoltinClient():
                                  json=payload, headers=self.headers)
         response.raise_for_status()
 
-    def get_basket_items(self, user_id):
+    def get_cart_items(self, user_id):
         """Получает товары корзины
 
         Args:
@@ -85,7 +85,7 @@ class MoltinClient():
 
         return response.json()
 
-    def get_basket(self, user_id):
+    def get_cart(self, user_id):
         """Получает корзину пользователя
 
         Args:
@@ -95,6 +95,18 @@ class MoltinClient():
         response.raise_for_status()
 
         return response.json()
+
+    def remove_item_from_cart(self, user_id, product_id):
+        """Удаляет продукт из корзины
+
+        Args:
+            user_id (str): id пользователя
+            product_id (str): id продукта
+        """
+        response = requests.delete(f'https://api.moltin.com/v2/carts/{user_id}/items/{product_id}',
+                                   headers=self.headers)
+        response.raise_for_status()
+
 
 if __name__ == '__main__':
     env = Env()
