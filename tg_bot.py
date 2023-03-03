@@ -47,6 +47,7 @@ def create_message_for_cart(chat_id, moltin_client):
     message += textwrap.dedent(f'''
 Итого: {cart['meta']['display_price']['with_tax']['formatted']}
                                ''')
+    keyboard.append([InlineKeyboardButton('Оплатить', callback_data='pay')])
     keyboard.append([InlineKeyboardButton('В меню', callback_data='main_menu')])
     reply_markup = InlineKeyboardMarkup(keyboard)
     return message, reply_markup
@@ -122,12 +123,21 @@ def handle_cart(bot, update, context, moltin_client):
         bot.send_message(text='Привет! Пожалуйста выберите товар:', chat_id=chat_id,
                          reply_markup=reply_markup)
         return 'HANDLE_MENU'
+    if callback_data == 'pay':
+        bot.send_message(text='Для формирования оплаты введите свою почту:', chat_id=chat_id)
+        return 'WAITING_EMAIL'
     else:
         moltin_client.remove_item_from_cart(chat_id, callback_data)
         cart_message, reply_markup = create_message_for_cart(chat_id, moltin_client)
         bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
         bot.send_message(text=cart_message, chat_id=chat_id, reply_markup=reply_markup)
         return 'HANDLE_CART'
+
+def handle_waiting_email(bot, update, context, moltin_client):
+    """Хэндлер обработки покупки"""
+    email = update.message.text
+    chat_id = update.message.chat_id
+    bot.send_message(text=f'Вы прислали мне эту почту: {email}', chat_id=chat_id)
 
 def handle_users_reply(update, context, states_functions, redis_client, moltin_client):
     """Функция, которая запускается при любом сообщении от пользователя и решает как его обработать."""
@@ -176,7 +186,8 @@ def main():
         'START': start,
         'HANDLE_MENU': handle_menu,
         'HANDLE_DESCRIPTION': handle_description,
-        'HANDLE_CART': handle_cart
+        'HANDLE_CART': handle_cart,
+        'WAITING_EMAIL': handle_waiting_email
     }
 
     handler_kwargs = {
