@@ -1,4 +1,5 @@
 """Модуль взаимодействия с API Moltin"""
+import datetime
 from environs import Env
 import requests
 from pprint import pprint
@@ -11,10 +12,7 @@ class MoltinClient():
         self.client_secret = client_secret
         self.access_token = ''
         self.headers = {}
-        self.auth_url = 'https://api.moltin.com/oauth/access_token'
-        self.get_products_url = 'https://api.moltin.com/catalog/products'
-        self.get_product_url = 'https://api.moltin.com/catalog/products/'
-        self.get_file_url = 'https://api.moltin.com/v2/files/'
+        self.expire_token_time = ''
 
     def auth(self):
         """Авторизация на Motlin"""
@@ -24,10 +22,14 @@ class MoltinClient():
             'grant_type': 'client_credentials'
         }
 
-        response_auth = requests.post(url=self.auth_url, data=auth_payload)
+        if self.access_token and datetime.datetime.now() < self.expire_token_time:
+            return
+
+        response_auth = requests.post(url='https://api.moltin.com/oauth/access_token', data=auth_payload)
 
         response_auth.raise_for_status()
         response_auth = response_auth.json()
+        self.expire_token_time = datetime.datetime.fromtimestamp(response_auth['expires'])
         self.access_token = response_auth['access_token']
         self.headers = {
             'Authorization': f'Bearer {self.access_token}'
@@ -35,21 +37,30 @@ class MoltinClient():
 
     def get_products(self):
         """Получает продукты"""
-        response = requests.get(self.get_products_url, headers=self.headers)
+        self.auth()
+        response = requests.get('https://api.moltin.com/catalog/products', headers=self.headers)
         response.raise_for_status()
 
         return response.json()
 
     def get_product(self, id):
-        """Получает продукт по id"""
-        response = requests.get(f'{self.get_product_url}{id}/', headers=self.headers)
+        """Получает продукт по id
+        Args:
+            id (str): id товара
+        """
+        self.auth()
+        response = requests.get(f'https://api.moltin.com/catalog/products/{id}/', headers=self.headers)
         response.raise_for_status()
 
         return response.json()
 
     def get_file(self, id):
-        """Получает ссылку на файл"""
-        response = requests.get(f'{self.get_file_url}{id}/', headers=self.headers)
+        """Получает ссылку на файл
+         Args:
+            id (str): id изображения
+        """
+        self.auth()
+        response = requests.get(f'https://api.moltin.com/v2/files/{id}/', headers=self.headers)
         response.raise_for_status()
         response = response.json()
 
@@ -63,6 +74,7 @@ class MoltinClient():
             product_id (str): id товара
             quantity (int): количество товара
         """
+        self.auth()
         payload = {
             "data": {
                 "id": product_id,
@@ -80,6 +92,7 @@ class MoltinClient():
         Args:
             user_id (str): id пользователя
         """
+        self.auth()
         response = requests.get(f'https://api.moltin.com/v2/carts/{user_id}/items', headers=self.headers)
         response.raise_for_status()
 
@@ -91,6 +104,7 @@ class MoltinClient():
         Args:
             user_id (str): id пользователя
         """
+        self.auth()
         response = requests.get(f'https://api.moltin.com/v2/carts/{user_id}', headers=self.headers)
         response.raise_for_status()
 
@@ -103,6 +117,7 @@ class MoltinClient():
             user_id (str): id пользователя
             product_id (str): id продукта
         """
+        self.auth()
         response = requests.delete(f'https://api.moltin.com/v2/carts/{user_id}/items/{product_id}',
                                    headers=self.headers)
         response.raise_for_status()
@@ -114,6 +129,7 @@ class MoltinClient():
             chat_id (str): id пользователя
             email (str): email пользователя
         """
+        self.auth()
         payload = {
             "data": {
                 "type": "customer",
