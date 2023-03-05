@@ -37,14 +37,20 @@ class MoltinClient():
         return response.json()
 
     def get_product(self, id):
-        """Получает продукт по id"""
+        """Получает продукт по id
+        Args:
+            id (str): id товара
+        """
         response = requests.get(f'https://api.moltin.com/catalog/products/{id}/', headers=self.headers)
         response.raise_for_status()
 
         return response.json()
 
     def get_file(self, id):
-        """Получает ссылку на файл"""
+        """Получает ссылку на файл
+         Args:
+            id (str): id изображения
+        """
         response = requests.get(f'https://api.moltin.com/v2/files/{id}/', headers=self.headers)
         response.raise_for_status()
         response = response.json()
