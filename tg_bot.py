@@ -36,17 +36,14 @@ def create_message_for_cart(chat_id, moltin_client):
     message = ''
     for cart_item in cart_items:
         message += textwrap.dedent(f'''
-{cart_item.get('name')}
-{cart_item.get('description')}
-{cart_item['meta']['display_price']['with_tax']['unit']['formatted']} за кг
-В корзине {cart_item.get('quantity')} кг на {cart_item['meta']['display_price']['with_tax']['value']['formatted']}
-
-                                   ''')
+                                  {cart_item.get('name')}
+                                  {cart_item.get('description')}
+                                  {cart_item['meta']['display_price']['with_tax']['unit']['formatted']} за кг
+                                  В корзине {cart_item.get('quantity')} кг на {cart_item['meta']['display_price']
+                                  ['with_tax']['value']['formatted']}''')
         keyboard.append([InlineKeyboardButton(f"Убрать из корзины {cart_item['name']}",
                                               callback_data=cart_item['id'])])
-    message += textwrap.dedent(f'''
-Итого: {cart['meta']['display_price']['with_tax']['formatted']}
-                               ''')
+    message += textwrap.dedent(f'''Итого: {cart['meta']['display_price']['with_tax']['formatted']}''')
     keyboard.append([InlineKeyboardButton('Оплатить', callback_data='pay')])
     keyboard.append([InlineKeyboardButton('В меню', callback_data='main_menu')])
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -74,16 +71,15 @@ def handle_menu(bot, update, context, moltin_client):
     image_id = product['relationships']['main_image']['data']['id']
     image_link = moltin_client.get_file(image_id)
     product_details = textwrap.dedent(f'''
-{product['attributes'].get('name')}
-{product['meta']['display_price']['without_tax']['formatted']}
-{product['attributes'].get('description')}
-                                      ''')
+                                      {product['attributes'].get('name')}
+                                      {product['meta']['display_price']['without_tax']['formatted']}
+                                      {product['attributes'].get('description')}''')
     keyboard = [
         [InlineKeyboardButton('1 кг', callback_data=1),
          InlineKeyboardButton('5 кг', callback_data=5),
          InlineKeyboardButton('10 кг', callback_data=10),
          ],
-        [InlineKeyboardButton('Корзина', callback_data='basket')],
+        [InlineKeyboardButton('Корзина', callback_data='cart')],
         [InlineKeyboardButton('Назад', callback_data='back')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
