@@ -11,10 +11,6 @@ class MoltinClient():
         self.client_secret = client_secret
         self.access_token = ''
         self.headers = {}
-        self.auth_url = 'https://api.moltin.com/oauth/access_token'
-        self.get_products_url = 'https://api.moltin.com/catalog/products'
-        self.get_product_url = 'https://api.moltin.com/catalog/products/'
-        self.get_file_url = 'https://api.moltin.com/v2/files/'
 
     def auth(self):
         """Авторизация на Motlin"""
@@ -24,7 +20,7 @@ class MoltinClient():
             'grant_type': 'client_credentials'
         }
 
-        response_auth = requests.post(url=self.auth_url, data=auth_payload)
+        response_auth = requests.post(url='https://api.moltin.com/oauth/access_token', data=auth_payload)
 
         response_auth.raise_for_status()
         response_auth = response_auth.json()
@@ -35,21 +31,21 @@ class MoltinClient():
 
     def get_products(self):
         """Получает продукты"""
-        response = requests.get(self.get_products_url, headers=self.headers)
+        response = requests.get('https://api.moltin.com/catalog/products', headers=self.headers)
         response.raise_for_status()
 
         return response.json()
 
     def get_product(self, id):
         """Получает продукт по id"""
-        response = requests.get(f'{self.get_product_url}{id}/', headers=self.headers)
+        response = requests.get(f'https://api.moltin.com/catalog/products/{id}/', headers=self.headers)
         response.raise_for_status()
 
         return response.json()
 
     def get_file(self, id):
         """Получает ссылку на файл"""
-        response = requests.get(f'{self.get_file_url}{id}/', headers=self.headers)
+        response = requests.get(f'https://api.moltin.com/v2/files/{id}/', headers=self.headers)
         response.raise_for_status()
         response = response.json()
 
