@@ -62,8 +62,8 @@ def handle_menu(bot, update, context, moltin_client):
     chat_id = query.message.chat_id
     if query.data == 'cart':
         cart_message, reply_markup = create_message_for_cart(chat_id, moltin_client)
-        bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
         bot.send_message(text=cart_message, chat_id=chat_id, reply_markup=reply_markup)
+        bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
         return 'HANDLE_CART'
     context.user_data['product_id'] = query.data
     product = moltin_client.get_product(query.data)
@@ -82,8 +82,8 @@ def handle_menu(bot, update, context, moltin_client):
         [InlineKeyboardButton('Корзина', callback_data='cart')],
         [InlineKeyboardButton('Назад', callback_data='back')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
     bot.sendPhoto(chat_id=chat_id, photo=image_link, caption=product_details, reply_markup=reply_markup)
+    bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
 
     return 'HANDLE_DESCRIPTION'
 
@@ -95,14 +95,14 @@ def handle_description(bot, update, context, moltin_client):
     product_id = context.user_data['product_id']
     if callback_data == 'back':
         reply_markup = create_menu_button(moltin_client)
-        bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
         bot.send_message(text='Привет! Пожалуйста выберите товар:', chat_id=chat_id,
                          reply_markup=reply_markup)
+        bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
         return 'HANDLE_MENU'
     elif callback_data == 'cart':
         cart_message, reply_markup = create_message_for_cart(chat_id, moltin_client)
-        bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
         bot.send_message(text=cart_message, chat_id=chat_id, reply_markup=reply_markup)
+        bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
         return 'HANDLE_CART'
     else:
         moltin_client.add_to_basket(chat_id, product_id, int(callback_data))
@@ -115,9 +115,9 @@ def handle_cart(bot, update, context, moltin_client):
     chat_id = query.message.chat_id
     if callback_data == 'main_menu':
         reply_markup = create_menu_button(moltin_client)
-        bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
         bot.send_message(text='Привет! Пожалуйста выберите товар:', chat_id=chat_id,
                          reply_markup=reply_markup)
+        bot.delete_message(chat_id=query.message.chat_id, message_id=query.message.message_id)
         return 'HANDLE_MENU'
     if callback_data == 'pay':
         bot.send_message(text='Для формирования оплаты введите свою почту:', chat_id=chat_id)
@@ -125,8 +125,8 @@ def handle_cart(bot, update, context, moltin_client):
     else:
         moltin_client.remove_item_from_cart(chat_id, callback_data)
         cart_message, reply_markup = create_message_for_cart(chat_id, moltin_client)
-        bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
         bot.send_message(text=cart_message, chat_id=chat_id, reply_markup=reply_markup)
+        bot.delete_message(chat_id=chat_id, message_id=query.message.message_id)
         return 'HANDLE_CART'
 
 def handle_waiting_email(bot, update, context, moltin_client):
