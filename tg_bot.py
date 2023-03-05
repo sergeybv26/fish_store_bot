@@ -40,7 +40,9 @@ def create_message_for_cart(chat_id, moltin_client):
                                   {cart_item.get('description')}
                                   {cart_item['meta']['display_price']['with_tax']['unit']['formatted']} за кг
                                   В корзине {cart_item.get('quantity')} кг на {cart_item['meta']['display_price']
-                                  ['with_tax']['value']['formatted']}''')
+                                  ['with_tax']['value']['formatted']}
+
+                                  ''')
         keyboard.append([InlineKeyboardButton(f"Убрать из корзины {cart_item['name']}",
                                               callback_data=cart_item['id'])])
     message += textwrap.dedent(f'''Итого: {cart['meta']['display_price']['with_tax']['formatted']}''')
